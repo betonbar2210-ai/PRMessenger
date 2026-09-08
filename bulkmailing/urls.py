@@ -1,8 +1,8 @@
 from django.urls import path
 
-from clients.apps import ClientsConfig
+from bulkmailing.apps import BulkmailingConfig
 
-app_name = ClientsConfig.name
+app_name = BulkmailingConfig.name
 
 urlpatterns = [
     # path("", ProductListView.as_view(), name="index"),
