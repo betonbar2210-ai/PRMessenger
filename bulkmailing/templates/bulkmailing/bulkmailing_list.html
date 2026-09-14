@@ -1,10 +1,56 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "texts/base.html" %}
 
-</body>
-</html>
+{% block title %}Рассылки{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Рассылки</h1>
+    <a href="{% url 'bulkmailing:bulkmailing_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Создать рассылку
+    </a>
+</div>
+
+{% if bulkmailings %}
+<div class="table-responsive">
+    <table class="table table-striped table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>#</th>
+                <th>Сообщение</th>
+                <th>Статус</th>
+                <th>Начало</th>
+                <th>Окончание</th>
+                <th>Получатели</th>
+                <th class="text-end">Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in bulkmailings %}
+            <tr>
+                <td>{{ m.pk }}</td>
+                <td>{{ m.message.title|truncatechars:30 }}</td>
+                <td>
+                    <span class="badge
+                        {% if m.status == 'created' %}bg-secondary
+                        {% elif m.status == 'started' %}bg-success
+                        {% else %}bg-dark{% endif %}">
+                        {{ m.get_status_display }}
+                    </span>
+                </td>
+                <td>{{ m.start_at|default:"—" }}</td>
+                <td>{{ m.end_at|default:"—" }}</td>
+                <td>{{ m.recipients.count }}</td>
+                <td class="text-end">
+                    <a href="{% url 'bulkmailing:bulkmailing_detail' m.pk %}" class="btn btn-sm btn-outline-primary">Просмотр</a>
+                    <a href="{% url 'bulkmailing:bulkmailing_update' m.pk %}" class="btn btn-sm btn-outline-secondary">Изменить</a>
+                    <a href="{% url 'bulkmailing:bulkmailing_delete' m.pk %}" class="btn btn-sm btn-outline-danger">Удалить</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">Рассылок пока нет. Создайте первую рассылку.</div>
+{% endif %}
+{% endblock %}

@@ -1,10 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "texts/base.html" %}
+{% load form_tags %}
 
-</body>
-</html>
+{% block title %}{% if form.instance.pk %}Изменить клиента{% else %}Новый клиент{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <h1 class="mb-4">{% if form.instance.pk %}Изменить клиента{% else %}Новый клиент{% endif %}</h1>
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% include "texts/form_fields.html" %}
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+                <a href="{% url 'clients:clients_list' %}" class="btn btn-outline-secondary">Отмена</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

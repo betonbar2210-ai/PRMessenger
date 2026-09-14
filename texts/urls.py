@@ -2,7 +2,13 @@ from django.urls import path
 
 
 from texts.apps import TextsConfig
-from texts.views import TextsListView, TextDetailView, TextCreateView, TextUpdateView, TextDeleteView
+from texts.views import (
+    TextsListView,
+    TextDetailView,
+    TextCreateView,
+    TextUpdateView,
+    TextDeleteView,
+)
 
 app_name = TextsConfig.name
 

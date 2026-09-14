@@ -3,8 +3,10 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+from bulkmailing.views import HomeView
 
 urlpatterns = [
+    path("", HomeView.as_view(), name="home"),
     path("admin/", admin.site.urls),
     path("clients/", include("clients.urls", namespace="clients")),
     path("texts/", include("texts.urls", namespace="texts")),

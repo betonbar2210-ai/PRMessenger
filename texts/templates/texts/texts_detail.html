@@ -1,10 +1,19 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "texts/base.html" %}
 
-</body>
-</html>
+{% block title %}{{ text.title }}{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">{{ text.title }}</h1>
+
+<div class="card mb-4">
+    <div class="card-body">
+        {{ text.text|linebreaks }}
+    </div>
+</div>
+
+<div>
+    <a href="{% url 'texts:text_update' text.pk %}" class="btn btn-secondary">Изменить</a>
+    <a href="{% url 'texts:text_delete' text.pk %}" class="btn btn-outline-danger">Удалить</a>
+    <a href="{% url 'texts:texts_list' %}" class="btn btn-outline-secondary">К списку</a>
+</div>
+{% endblock %}
