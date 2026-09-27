@@ -2,6 +2,7 @@ import smtplib
 
 from django.conf import settings
 from django.core.mail import EmailMessage
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
@@ -9,10 +10,6 @@ from .models import BulkMailing, BulkMailingAttempt
 
 
 def update_statuses() -> int:
-    """Помечает завершёнными рассылки, срок которых уже истёк.
-
-    Возвращает количество обновлённых рассылок.
-    """
     return BulkMailing.objects.filter(
         status__in=[BulkMailing.STATUS_CREATED, BulkMailing.STATUS_STARTED],
         end_at__lt=timezone.now(),
@@ -20,12 +17,12 @@ def update_statuses() -> int:
 
 
 def get_due_mailings():
-    """Рассылки, готовые к отправке сейчас (статус «Создана», наступило start_at)."""
     now = timezone.now()
     update_statuses()
     return (
         BulkMailing.objects.filter(
             status=BulkMailing.STATUS_CREATED,
+            is_disabled=False,
         )
         .filter(
             Q(start_at__isnull=True) | Q(start_at__lte=now),
@@ -34,19 +31,42 @@ def get_due_mailings():
     )
 
 
-def send_due_mailings():
-    """Отправляет все подошедшие по времени рассылки.
+def claim_mailing(mailing_pk: int):
+    with transaction.atomic():
+        claimed = (
+            BulkMailing.objects.select_for_update()
+            .filter(
+                pk=mailing_pk,
+                status=BulkMailing.STATUS_CREATED,
+                is_disabled=False,
+            )
+            .first()
+        )
+        if claimed is None:
+            return None
+        claimed.status = BulkMailing.STATUS_STARTED
+        claimed.save(update_fields=["status"])
+    return claimed
 
-    Возвращает список кортежей (рассылка, отправлено_успешно, ошибок).
-    """
+
+def send_due_mailings() -> list[tuple[BulkMailing, int, int]]:
     results = []
-    for mailing in get_due_mailings():
-        success_count, failed_count = send_mailing(mailing)
+    for mailing in list(get_due_mailings()):
+        outcome = send_mailing(mailing)
+        if outcome is None:
+            # Рассылку уже забрал другой процесс — второй раз не отправляем.
+            continue
+        success_count, failed_count = outcome
         results.append((mailing, success_count, failed_count))
     return results
 
 
-def send_mailing(mailing: BulkMailing) -> tuple[int, int]:
+def send_mailing(mailing: BulkMailing) -> tuple[int, int] | None:
+    claimed = claim_mailing(mailing.pk)
+    if claimed is None:
+        return None
+    mailing = claimed
+
     if mailing.end_at and mailing.end_at <= timezone.now():
         mailing.status = BulkMailing.STATUS_COMPLETED
         mailing.save(update_fields=["status"])

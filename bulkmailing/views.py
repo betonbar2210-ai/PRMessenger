@@ -1,18 +1,47 @@
-from django import forms
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
+from django.db.models import Count, Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.views import View
-from django.views.generic import ListView, DetailView, TemplateView
-from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.views.generic import DetailView, ListView, TemplateView
+from django.views.generic.edit import CreateView, DeleteView, UpdateView
 
 from clients.models import Client
-from bulkmailing.models import BulkMailing, BulkMailingAttempt
-from bulkmailing.services import send_due_mailings
+from users.mixins import (
+    ManagerRequiredMixin,
+    OwnedObjectMixin,
+    OwnerCreateMixin,
+    OwnerScopedMixin,
+    OwnerWriteMixin,
+)
 
-LOGIN_URL = "admin:login"
+from .forms import BulkMailingForm
+from .models import BulkMailing, BulkMailingAttempt
+from .services import send_mailing
+from config.settings import LOGIN_URL
+
+
+def scoped_mailings(user):
+    qs = BulkMailing.objects.all()
+    if not user.is_manager:
+        qs = qs.filter(owner=user)
+    return qs
+
+
+def home_counts(user) -> dict:
+    mailings = scoped_mailings(user)
+    clients = (
+        Client.objects.all() if user.is_manager else Client.objects.filter(owner=user)
+    )
+    return {
+        "total_mailings": mailings.count(),
+        "active_mailings": mailings.filter(status=BulkMailing.STATUS_STARTED).count(),
+        "unique_clients": clients.values("email").distinct().count(),
+    }
 
 
 class HomeView(LoginRequiredMixin, TemplateView):
@@ -21,98 +50,114 @@ class HomeView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        send_due_mailings()
-        context["total_mailings"] = BulkMailing.objects.count()
-        context["active_mailings"] = BulkMailing.objects.filter(
-            status=BulkMailing.STATUS_STARTED
-        ).count()
-        context["unique_clients"] = Client.objects.values("email").distinct().count()
+        context.update(home_counts(self.request.user))
         return context
 
 
-class BulkMailingForm(forms.ModelForm):
-    class Meta:
-        model = BulkMailing
-        fields = "__all__"
-        widgets = {
-            "start_at": forms.DateTimeInput(
-                attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"
-            ),
-            "end_at": forms.DateTimeInput(
-                attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"
-            ),
-            "recipients": forms.CheckboxSelectMultiple(
-                attrs={"class": "form-check-input"}
-            ),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for field in self.fields.values():
-            if isinstance(field.widget, forms.CheckboxSelectMultiple):
-                continue
-            existing = field.widget.attrs.get("class", "")
-            field.widget.attrs["class"] = f"{existing} form-control".strip()
-
-
-class BulkMailingListView(LoginRequiredMixin, ListView):
+class BulkMailingListView(OwnerScopedMixin, ListView):
     model = BulkMailing
     template_name = "bulkmailing/bulkmailing_list.html"
     context_object_name = "bulkmailings"
-    login_url = LOGIN_URL
+    owner_field = "owner"
+    paginate_by = 25
 
     def get_queryset(self):
-        send_due_mailings()
-        return super().get_queryset()
+        return (
+            super()
+            .get_queryset()
+            .select_related("message", "owner")
+            .annotate(recipients_count=Count("recipients"))
+        )
 
 
-class BulkMailingDetailView(LoginRequiredMixin, DetailView):
+class BulkMailingDetailView(OwnedObjectMixin, DetailView):
     model = BulkMailing
     template_name = "bulkmailing/bulkmailing_detail.html"
     context_object_name = "bulkmailing"
-    login_url = LOGIN_URL
+    owner_field = "owner"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        send_due_mailings()
-        self.object.refresh_from_db()
-        context["attempts"] = self.object.attempts.select_related("mailing")
+        context["attempts"] = self.object.attempts.all()
+        context["stats"] = self.object.attempts.aggregate(
+            success=Count("pk", filter=Q(status=BulkMailingAttempt.STATUS_SUCCESS)),
+            failed=Count("pk", filter=Q(status=BulkMailingAttempt.STATUS_FAILED)),
+        )
         return context
 
 
-class BulkMailingCreateView(LoginRequiredMixin, CreateView):
+class BulkMailingCreateView(OwnerCreateMixin, CreateView):
     model = BulkMailing
     form_class = BulkMailingForm
     template_name = "bulkmailing/bulkmailing_form.html"
     success_url = reverse_lazy("bulkmailing:bulkmailing_list")
-    login_url = LOGIN_URL
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["owner"] = self.request.user
+        return kwargs
 
 
-class BulkMailingUpdateView(LoginRequiredMixin, UpdateView):
+class BulkMailingUpdateView(OwnerWriteMixin, UpdateView):
     model = BulkMailing
     form_class = BulkMailingForm
     template_name = "bulkmailing/bulkmailing_form.html"
     success_url = reverse_lazy("bulkmailing:bulkmailing_list")
-    login_url = LOGIN_URL
+    owner_field = "owner"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["owner"] = self.request.user
+        return kwargs
 
 
-class BulkMailingDeleteView(LoginRequiredMixin, DeleteView):
+class BulkMailingDeleteView(OwnerWriteMixin, DeleteView):
     model = BulkMailing
     template_name = "bulkmailing/bulkmailing_confirm_delete.html"
     success_url = reverse_lazy("bulkmailing:bulkmailing_list")
-    login_url = LOGIN_URL
+    owner_field = "owner"
 
 
-class BulkMailingSendView(LoginRequiredMixin, View):
+class BulkMailingSendView(OwnedObjectMixin, View):
     login_url = LOGIN_URL
 
     def post(self, request, pk):
-        mailing = get_object_or_404(BulkMailing, pk=pk)
-        success_count, failed_count = send_mailing(mailing)
-        messages.info(
-            request,
-            f"Отправлено успешно: {success_count}, ошибок: {failed_count}",
+        queryset = BulkMailing.objects.all()
+        if not request.user.is_manager:
+            queryset = queryset.filter(owner=request.user)
+        mailing = get_object_or_404(queryset, pk=pk)
+        if mailing.owner != request.user:
+            raise PermissionDenied
+        outcome = send_mailing(mailing)
+        if outcome is None:
+            messages.warning(
+                request,
+                "Рассылка уже отправляется, уже отправлена или отключена.",
+            )
+        else:
+            success_count, failed_count = outcome
+            messages.info(
+                request,
+                f"Отправлено успешно: {success_count}, ошибок: {failed_count}",
+            )
+        return HttpResponseRedirect(
+            reverse("bulkmailing:bulkmailing_detail", args=[mailing.pk])
         )
+
+
+class BulkMailingToggleDisableView(ManagerRequiredMixin, View):
+    def post(self, request, pk):
+        mailing = get_object_or_404(BulkMailing, pk=pk)
+        if mailing.is_disabled:
+            mailing.is_disabled = False
+            mailing.disabled_at = None
+            text = "Рассылка включена."
+        else:
+            mailing.is_disabled = True
+            mailing.disabled_at = timezone.now()
+            text = "Рассылка отключена."
+        mailing.save(update_fields=["is_disabled", "disabled_at"])
+        messages.info(request, text)
         return HttpResponseRedirect(
             reverse("bulkmailing:bulkmailing_detail", args=[mailing.pk])
         )

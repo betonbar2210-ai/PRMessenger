@@ -6,18 +6,31 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-start mb-3">
     <h1 class="mb-0">Рассылка #{{ bulkmailing.pk }}</h1>
-    <form method="post" action="{% url 'bulkmailing:bulkmailing_send' bulkmailing.pk %}" class="d-inline">
-        {% csrf_token %}
-        {% if bulkmailing.status == 'completed' %}
-            <button type="submit" class="btn btn-success" disabled title="Рассылка завершена">
-                <i class="bi bi-send-fill me-1"></i>Отправить
+    <div>
+        {% if user.is_superuser or user.role == 'manager' %}
+        <form method="post" action="{% url 'bulkmailing:bulkmailing_toggle' bulkmailing.pk %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn {% if bulkmailing.is_disabled %}btn-success{% else %}btn-outline-warning{% endif %}">
+                {% if bulkmailing.is_disabled %}Включить{% else %}Отключить{% endif %}
             </button>
-        {% else %}
-            <button type="submit" class="btn btn-success">
-                <i class="bi bi-send-fill me-1"></i>Отправить
-            </button>
+        </form>
         {% endif %}
-    </form>
+        {% if bulkmailing.owner_id == user.id %}
+        <form method="post" action="{% url 'bulkmailing:bulkmailing_send' bulkmailing.pk %}" class="d-inline">
+            {% csrf_token %}
+            {% if bulkmailing.status != 'created' or bulkmailing.is_disabled %}
+                <button type="submit" class="btn btn-success" disabled
+                        title="{% if bulkmailing.is_disabled %}Рассылка отключена менеджером{% elif bulkmailing.status == 'started' %}Рассылка уже запущена{% else %}Рассылка завершена{% endif %}">
+                    <i class="bi bi-send-fill me-1"></i>Отправить
+                </button>
+            {% else %}
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-send-fill me-1"></i>Отправить
+                </button>
+            {% endif %}
+        </form>
+        {% endif %}
+    </div>
 </div>
 
 <div class="row g-4">
@@ -43,8 +56,22 @@
                     <dd class="col-sm-7">
                         <a href="{% url 'texts:text_detail' bulkmailing.message.pk %}">{{ bulkmailing.message.title }}</a>
                     </dd>
+                    <dt class="col-sm-5">Владелец</dt>
+                    <dd class="col-sm-7">{{ bulkmailing.owner.email }}</dd>
                     <dt class="col-sm-5">Получатели</dt>
                     <dd class="col-sm-7">{{ bulkmailing.recipients.count }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">Итоги попыток</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-7">Успешно</dt>
+                    <dd class="col-sm-5 text-success">{{ stats.success }}</dd>
+                    <dt class="col-sm-7">С ошибкой</dt>
+                    <dd class="col-sm-5 text-danger">{{ stats.failed }}</dd>
                 </dl>
             </div>
         </div>
@@ -85,8 +112,14 @@
 {% endif %}
 
 <div class="mt-4">
+    {% if bulkmailing.owner_id == user.id %}
     <a href="{% url 'bulkmailing:bulkmailing_update' bulkmailing.pk %}" class="btn btn-secondary">Изменить</a>
     <a href="{% url 'bulkmailing:bulkmailing_delete' bulkmailing.pk %}" class="btn btn-outline-danger">Удалить</a>
+    {% else %}
+    <div class="alert alert-secondary mb-0">
+        Это рассылка другого пользователя — доступно только просмотр.
+    </div>
+    {% endif %}
     <a href="{% url 'bulkmailing:bulkmailing_list' %}" class="btn btn-outline-secondary">К списку</a>
 </div>
 {% endblock %}

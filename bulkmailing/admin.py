@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 from .models import BulkMailing, BulkMailingAttempt
 
 
@@ -11,10 +12,15 @@ class BulkMailingAdmin(admin.ModelAdmin):
         "end_at",
         "message_title",
         "recipients_count",
+        "owner",
+        "is_disabled",
     )
-    list_filter = ("status",)
-    search_fields = ("message__title",)
+    list_filter = ("status", "is_disabled")
+    search_fields = ("message__title", "owner__email")
+    list_select_related = ("message", "owner")
     list_per_page = 25
+    filter_horizontal = ("recipients",)
+    raw_id_fields = ("owner",)
 
     @admin.display(description="Тема сообщения")
     def message_title(self, obj):

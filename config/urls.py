@@ -11,6 +11,8 @@ urlpatterns = [
     path("clients/", include("clients.urls", namespace="clients")),
     path("texts/", include("texts.urls", namespace="texts")),
     path("bulkmailing/", include("bulkmailing.urls", namespace="bulkmailing")),
+    path("statistics/", include("statistics.urls", namespace="statistics")),
+    path("users/", include("users.urls", namespace="users")),
 ]
 
 

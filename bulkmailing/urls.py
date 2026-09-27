@@ -8,6 +8,7 @@ from bulkmailing.views import (
     BulkMailingUpdateView,
     BulkMailingDeleteView,
     BulkMailingSendView,
+    BulkMailingToggleDisableView,
 )
 
 app_name = BulkmailingConfig.name
@@ -30,5 +31,10 @@ urlpatterns = [
         "<int:pk>/send/",
         BulkMailingSendView.as_view(),
         name="bulkmailing_send",
+    ),
+    path(
+        "<int:pk>/toggle/",
+        BulkMailingToggleDisableView.as_view(),
+        name="bulkmailing_toggle",
     ),
 ]

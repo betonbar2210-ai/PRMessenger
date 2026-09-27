@@ -16,6 +16,7 @@
         <thead class="table-light">
             <tr>
                 <th>#</th>
+                <th>Создатель</th>
                 <th>Сообщение</th>
                 <th>Статус</th>
                 <th>Начало</th>
@@ -25,25 +26,26 @@
             </tr>
         </thead>
         <tbody>
-            {% for m in bulkmailings %}
+            {% for bulk in bulkmailings %}
             <tr>
-                <td>{{ m.pk }}</td>
-                <td>{{ m.message.title|truncatechars:30 }}</td>
+                <td>{{ bulk.pk }}</td>
+                <td>{{ bulk.owner }}</td>
+                <td>{{ bulk.message.title|truncatechars:30 }}</td>
                 <td>
                     <span class="badge
-                        {% if m.status == 'created' %}bg-secondary
-                        {% elif m.status == 'started' %}bg-success
+                        {% if bulk.status == 'created' %}bg-secondary
+                        {% elif bulk.status == 'started' %}bg-success
                         {% else %}bg-dark{% endif %}">
-                        {{ m.get_status_display }}
+                        {{ bulk.get_status_display }}
                     </span>
                 </td>
-                <td>{{ m.start_at|default:"—" }}</td>
-                <td>{{ m.end_at|default:"—" }}</td>
-                <td>{{ m.recipients.count }}</td>
+                <td>{{ bulk.start_at|default:"—" }}</td>
+                <td>{{ bulk.end_at|default:"—" }}</td>
+                <td>{{ bulk.recipients.count }}</td>
                 <td class="text-end">
-                    <a href="{% url 'bulkmailing:bulkmailing_detail' m.pk %}" class="btn btn-sm btn-outline-primary">Просмотр</a>
-                    <a href="{% url 'bulkmailing:bulkmailing_update' m.pk %}" class="btn btn-sm btn-outline-secondary">Изменить</a>
-                    <a href="{% url 'bulkmailing:bulkmailing_delete' m.pk %}" class="btn btn-sm btn-outline-danger">Удалить</a>
+                    <a href="{% url 'bulkmailing:bulkmailing_detail' bulk.pk %}" class="btn btn-sm btn-outline-primary">Просмотр</a>
+                    <a href="{% url 'bulkmailing:bulkmailing_update' bulk.pk %}" class="btn btn-sm btn-outline-secondary">Изменить</a>
+                    <a href="{% url 'bulkmailing:bulkmailing_delete' bulk.pk %}" class="btn btn-sm btn-outline-danger">Удалить</a>
                 </td>
             </tr>
             {% endfor %}

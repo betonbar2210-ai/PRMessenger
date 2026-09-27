@@ -1,4 +1,5 @@
 import os
+import sys
 
 from dotenv import load_dotenv
 from pathlib import Path
@@ -23,6 +24,8 @@ INSTALLED_APPS = [
     "clients",
     "texts",
     "bulkmailing",
+    "statistics",
+    "users",
 ]
 
 MIDDLEWARE = [
@@ -33,7 +36,11 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "config.middleware.BlockedUserMiddleware",
+    "django.middleware.http.ConditionalGetMiddleware",
+    "config.middleware.ClientCacheMiddleware",
 ]
+
 
 ROOT_URLCONF = "config.urls"
 
@@ -109,3 +116,31 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = (
     os.getenv("DEFAULT_FROM_EMAIL") or EMAIL_HOST_USER or "webmaster@localhost"
 )
+
+AUTH_USER_MODEL = "users.CustomUser"
+
+AUTHENTICATION_BACKENDS = [
+    "users.backends.EmailBackend",
+]
+
+LOGIN_URL = "users:login"
+LOGIN_REDIRECT_URL = "home"
+LOGOUT_REDIRECT_URL = "/"
+
+CACHES = {
+    "default": {
+        "BACKEND": "config.cache.ResilientRedisCache",
+        "LOCATION": os.getenv("REDIS_URL", default="redis://127.0.0.1:6379/1"),
+        "KEY_PREFIX": os.getenv("CACHE_KEY_PREFIX", default="prmessenger"),
+    }
+}
+
+if "test" in sys.argv:
+    CACHES["default"] = {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "prmessenger-test",
+    }
+
+STATISTICS_CACHE_SECONDS = 60
+
+CACHE_EQUIV_TTL = True

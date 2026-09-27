@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -8,6 +9,12 @@ class Text(models.Model):
     )
     text = models.TextField(
         verbose_name="Тело письма",
+    )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="texts",
+        verbose_name="Владелец",
     )
 
     class Meta:

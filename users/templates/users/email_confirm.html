@@ -1,0 +1,23 @@
+{% extends 'texts/base.html' %}
+{% block title %}Подтверждение email{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h1>Подтверждение email</h1>
+
+        {% if invalid %}
+            <div class="alert alert-danger">
+                Ссылка недействительна или истекла. Запросите новое письмо для подтверждения.
+            </div>
+            <a href="{% url 'users:resend_confirmation' %}" class="btn btn-primary">
+                Отправить письмо повторно
+            </a>
+        {% elif already %}
+            <div class="alert alert-info">
+                Ваш email уже подтверждён.
+            </div>
+            <a href="{% url 'users:login' %}" class="btn btn-primary">Войти</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

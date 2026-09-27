@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -13,6 +14,12 @@ class Client(models.Model):
     comment = models.TextField(
         blank=True,
         verbose_name="Комментарий",
+    )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="clients",
+        verbose_name="Владелец",
     )
 
     class Meta:

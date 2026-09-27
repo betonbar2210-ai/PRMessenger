@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}PRMessenger{% endblock %}</title>
-
+    <link rel="icon" href="{% static 'images/favicon.ico' %}">
     <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 
@@ -36,9 +36,28 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'bulkmailing:bulkmailing_list' %}">Рассылки</a>
                 </li>
+                {% if user.is_authenticated %}
                 <li class="nav-item">
-                    <a class="nav-link" href="/admin/">Админка</a>
+                    <a class="nav-link" href="{% url 'statistics:statistics' %}">Статистика</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'users:profile' %}">Профиль</a>
+                </li>
+                {% if user.is_superuser or user.role == 'manager' %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'users:user_list' %}">Пользователи</a>
+                </li>
+                {% endif %}
+                <li class="nav-item">
+                    <form action="{% url 'users:logout' %}" method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="nav-link btn btn-link">Выход из профиля</button>
+                    </form>
+                </li>
+                {% else %}
+                    <a class="nav-link" href="{% url 'users:login' %}">Вход в профиль</a>
+                    <a class="nav-link" href="{% url 'users:register' %}">Регистрация</a>
+                {% endif %}
             </ul>
         </div>
     </div>

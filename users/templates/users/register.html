@@ -1,0 +1,24 @@
+{% extends 'texts/base.html' %}
+{% load static %}
+{% block title %}Регистрация{% endblock title %}
+{% block content %}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>Регистрация Пользователя! Если Вы менеджер обратитесь к администратору с указанием E-mail</h1>
+                <p class="text-muted">
+                    После регистрации мы отправим письмо со ссылкой для подтверждения
+                    email. Аккаунт активируется после перехода по ссылке.
+                </p>
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form.non_field_errors }}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-primary">
+                        Зарегистрироваться
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock content %}

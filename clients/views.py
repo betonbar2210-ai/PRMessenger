@@ -1,46 +1,52 @@
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import ListView, DetailView
 from django.urls import reverse_lazy
-from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.views.generic import DetailView, ListView
+from django.views.generic.edit import CreateView, DeleteView, UpdateView
 
+from users.mixins import (
+    OwnedObjectMixin,
+    OwnerCreateMixin,
+    OwnerScopedMixin,
+    OwnerWriteMixin,
+)
+
+from .forms import ClientForm
 from .models import Client
 
 
-class ClientsListView(LoginRequiredMixin, ListView):
+class ClientsListView(OwnerScopedMixin, ListView):
     model = Client
     template_name = "clients/clients_list.html"
     context_object_name = "clients"
-    login_url = "admin:login"
+    paginate_by = 25
+
+    def get_queryset(self):
+        return super().get_queryset().select_related("owner")
 
 
-class ClientDetailView(LoginRequiredMixin, DetailView):
+class ClientDetailView(OwnedObjectMixin, DetailView):
     model = Client
     template_name = "clients/client_detail.html"
     context_object_name = "client"
-    login_url = "admin:login"
 
 
-class ClientCreateView(LoginRequiredMixin, CreateView):
+class ClientCreateView(OwnerCreateMixin, CreateView):
     model = Client
+    form_class = ClientForm
     template_name = "clients/client_form.html"
-    fields = "__all__"
     success_url = reverse_lazy("clients:clients_list")
     context_object_name = "client"
-    login_url = "admin:login"
 
 
-class ClientUpdateView(LoginRequiredMixin, UpdateView):
+class ClientUpdateView(OwnerWriteMixin, UpdateView):
     model = Client
+    form_class = ClientForm
     template_name = "clients/client_form.html"
-    fields = "__all__"
     success_url = reverse_lazy("clients:clients_list")
     context_object_name = "client"
-    login_url = "admin:login"
 
 
-class ClientDeleteView(LoginRequiredMixin, DeleteView):
+class ClientDeleteView(OwnerWriteMixin, DeleteView):
     model = Client
     template_name = "clients/client_confirm_delete.html"
     success_url = reverse_lazy("clients:clients_list")
     context_object_name = "client"
-    login_url = "admin:login"
