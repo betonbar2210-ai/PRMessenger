@@ -21,7 +21,7 @@ from users.mixins import (
 
 from .forms import BulkMailingForm
 from .models import BulkMailing, BulkMailingAttempt
-from .services import send_mailing
+from .services import MailingWindowError, send_mailing
 from config.settings import LOGIN_URL
 
 
@@ -78,7 +78,10 @@ class BulkMailingDetailView(OwnedObjectMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["attempts"] = self.object.attempts.all()
+        attempts = BulkMailingAttempt.objects.filter(
+            mailing=self.object
+        ).select_related("recipient")
+        context["attempts"] = attempts
         context["stats"] = self.object.attempts.aggregate(
             success=Count("pk", filter=Q(status=BulkMailingAttempt.STATUS_SUCCESS)),
             failed=Count("pk", filter=Q(status=BulkMailingAttempt.STATUS_FAILED)),
@@ -128,18 +131,27 @@ class BulkMailingSendView(OwnedObjectMixin, View):
         mailing = get_object_or_404(queryset, pk=pk)
         if mailing.owner != request.user:
             raise PermissionDenied
-        outcome = send_mailing(mailing)
-        if outcome is None:
-            messages.warning(
-                request,
-                "Рассылка уже отправляется, уже отправлена или отключена.",
-            )
+
+        # Кнопка отправляет рассылку независимо от расписания, но забрать её
+        # может только один процесс: если планировщик уже отправляет её или
+        # рассылка уже ушла/отключена, повторной отправки не будет.
+        try:
+            outcome = send_mailing(mailing)
+        except MailingWindowError as exc:
+            # Время вызова обработчика не разрешено — демонстрируем ошибку.
+            messages.error(request, "; ".join(exc.messages))
         else:
-            success_count, failed_count = outcome
-            messages.info(
-                request,
-                f"Отправлено успешно: {success_count}, ошибок: {failed_count}",
-            )
+            if outcome is None:
+                messages.warning(
+                    request,
+                    "Рассылка уже отправляется, уже отправлена или отключена.",
+                )
+            else:
+                success_count, failed_count = outcome
+                messages.info(
+                    request,
+                    f"Отправлено успешно: {success_count}, ошибок: {failed_count}",
+                )
         return HttpResponseRedirect(
             reverse("bulkmailing:bulkmailing_detail", args=[mailing.pk])
         )

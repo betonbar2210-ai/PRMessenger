@@ -50,6 +50,16 @@
                     </dd>
                     <dt class="col-sm-5">Начало отправки</dt>
                     <dd class="col-sm-7">{{ bulkmailing.start_at|default:"—" }}</dd>
+                    <dt class="col-sm-5">Периодичность</dt>
+                    <dd class="col-sm-7">{{ bulkmailing.get_periodicity_display }}</dd>
+                    <dt class="col-sm-5">Следующая отправка</dt>
+                    <dd class="col-sm-7">
+                        {% if bulkmailing.is_periodic %}
+                            {{ bulkmailing.next_run_at|default:"—" }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </dd>
                     <dt class="col-sm-5">Окончание</dt>
                     <dd class="col-sm-7">{{ bulkmailing.end_at|default:"—" }}</dd>
                     <dt class="col-sm-5">Сообщение</dt>
@@ -87,7 +97,9 @@
             <tr>
                 <th>#</th>
                 <th>Дата и время</th>
+                <th>Получатель</th>
                 <th>Статус</th>
+                <th>Код ошибки</th>
                 <th>Ответ сервера</th>
             </tr>
         </thead>
@@ -97,10 +109,19 @@
                 <td>{{ attempt.pk }}</td>
                 <td>{{ attempt.attempted_at }}</td>
                 <td>
+                    {% if attempt.recipient %}
+                        {{ attempt.recipient.name }}
+                        <div class="text-muted small">{{ attempt.recipient.email }}</div>
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>
                     <span class="badge {% if attempt.status == 'success' %}bg-success{% else %}bg-danger{% endif %}">
                         {{ attempt.get_status_display }}
                     </span>
                 </td>
+                <td>{{ attempt.error_code|default:"—" }}</td>
                 <td>{{ attempt.server_response|default:"—" }}</td>
             </tr>
             {% endfor %}

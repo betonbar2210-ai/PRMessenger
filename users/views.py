@@ -116,7 +116,6 @@ class PasswordResetView(BasePasswordResetView):
     login_url = LOGIN_URL
 
 
-
 class PasswordResetDoneView(BasePasswordResetDoneView):
     template_name = "users/password_reset_done.html"
 

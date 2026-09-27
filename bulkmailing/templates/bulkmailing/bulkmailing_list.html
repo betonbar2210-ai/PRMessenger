@@ -41,7 +41,7 @@
                 </td>
                 <td>{{ bulk.start_at|default:"—" }}</td>
                 <td>{{ bulk.end_at|default:"—" }}</td>
-                <td>{{ bulk.recipients.count }}</td>
+                <td>{{ bulk.recipients_count }}</td>
                 <td class="text-end">
                     <a href="{% url 'bulkmailing:bulkmailing_detail' bulk.pk %}" class="btn btn-sm btn-outline-primary">Просмотр</a>
                     <a href="{% url 'bulkmailing:bulkmailing_update' bulk.pk %}" class="btn btn-sm btn-outline-secondary">Изменить</a>
