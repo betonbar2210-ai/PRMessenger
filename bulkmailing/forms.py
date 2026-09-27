@@ -34,6 +34,7 @@ class BulkMailingForm(forms.ModelForm):
     def __init__(self, *args, owner=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.owner = owner
+        self.fields["message"].empty_label = "— выберите сообщение —"
         if owner is not None and not owner.is_manager:
             from clients.models import Client
             from texts.models import Text
@@ -41,7 +42,11 @@ class BulkMailingForm(forms.ModelForm):
             self.fields["message"].queryset = Text.objects.filter(owner=owner)
             self.fields["recipients"].queryset = Client.objects.filter(owner=owner)
         for name, field in self.fields.items():
-            if isinstance(field.widget, forms.CheckboxSelectMultiple):
+            # Чекбоксы и радиокнопки рендерятся шаблоном с классами
+            # form-check, а form-control им мешает.
+            if isinstance(
+                field.widget, (forms.CheckboxSelectMultiple, forms.RadioSelect)
+            ):
                 continue
             existing = field.widget.attrs.get("class", "")
             field.widget.attrs["class"] = f"{existing} form-control".strip()

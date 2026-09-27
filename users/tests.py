@@ -899,3 +899,20 @@ class PeriodicityTests(TestCase):
         # Первый запуск планируется на дату первой отправки из формы.
         self.assertEqual(mailing.next_run_at, mailing.start_at)
         self.assertIsNotNone(mailing.next_run_at)
+
+    def test_periodicity_rendered_as_radios(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse("bulkmailing:bulkmailing_create"))
+        content = response.content.decode()
+        for value in ("once", "daily", "weekly", "monthly"):
+            self.assertIn(f'type="radio" name="periodicity" value="{value}"', content)
+        # Радиокнопки не должны получать form-control — это ломает вёрстку.
+        self.assertNotIn('class="form-control" type="radio"', content)
+
+    def test_periodicity_radios_do_not_break_other_fields(self):
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse("bulkmailing:bulkmailing_create"))
+        content = response.content.decode()
+        # Обычные поля продолжают получать form-control.
+        self.assertIn('class="form-control"', content)
+        self.assertEqual(content.count('type="radio"'), 4)

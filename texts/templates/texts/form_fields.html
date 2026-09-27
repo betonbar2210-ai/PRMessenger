@@ -5,23 +5,20 @@
     </div>
 {% endif %}
 {% for field in form %}
-    {% if field|is_checkbox %}
-        <div class="mb-3">
+    <div class="mb-3">
+        {% if field|is_checkbox %}
             <label class="form-label">{{ field.label }}</label>
             {{ field|render_checkboxes }}
-            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-            {% for error in field.errors %}
-                <div class="text-danger small mt-1">{{ error }}</div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="mb-3">
+        {% elif field|is_radio %}
+            <label class="form-label">{{ field.label }}</label>
+            {{ field|render_radios }}
+        {% else %}
             <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
             {{ field|add_class:"form-control" }}
-            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-            {% for error in field.errors %}
-                <div class="text-danger small mt-1">{{ error }}</div>
-            {% endfor %}
-        </div>
-    {% endif %}
+        {% endif %}
+        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+        {% for error in field.errors %}
+            <div class="text-danger small mt-1">{{ error }}</div>
+        {% endfor %}
+    </div>
 {% endfor %}
