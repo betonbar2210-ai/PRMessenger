@@ -1,0 +1,146 @@
+{% extends "texts/base.html" %}
+{% load form_tags %}
+
+{% block title %}{{ bulkmailing.message.title }} (рассылка){% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <h1 class="mb-0">Рассылка #{{ bulkmailing.pk }}</h1>
+    <div>
+        {% if user.is_superuser or user.role == 'manager' %}
+        <form method="post" action="{% url 'bulkmailing:bulkmailing_toggle' bulkmailing.pk %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn {% if bulkmailing.is_disabled %}btn-success{% else %}btn-outline-warning{% endif %}">
+                {% if bulkmailing.is_disabled %}Включить{% else %}Отключить{% endif %}
+            </button>
+        </form>
+        {% endif %}
+        {% if bulkmailing.owner_id == user.id %}
+        <form method="post" action="{% url 'bulkmailing:bulkmailing_send' bulkmailing.pk %}" class="d-inline">
+            {% csrf_token %}
+            {% if bulkmailing.status != 'created' or bulkmailing.is_disabled %}
+                <button type="submit" class="btn btn-success" disabled
+                        title="{% if bulkmailing.is_disabled %}Рассылка отключена менеджером{% elif bulkmailing.status == 'started' %}Рассылка уже запущена{% else %}Рассылка завершена{% endif %}">
+                    <i class="bi bi-send-fill me-1"></i>Отправить
+                </button>
+            {% else %}
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-send-fill me-1"></i>Отправить
+                </button>
+            {% endif %}
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card mb-4">
+            <div class="card-header">Информация</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">Статус</dt>
+                    <dd class="col-sm-7">
+                        <span class="badge
+                            {% if bulkmailing.status == 'created' %}bg-secondary
+                            {% elif bulkmailing.status == 'started' %}bg-success
+                            {% else %}bg-dark{% endif %}">
+                            {{ bulkmailing.get_status_display }}
+                        </span>
+                    </dd>
+                    <dt class="col-sm-5">Начало отправки</dt>
+                    <dd class="col-sm-7">{{ bulkmailing.start_at|default:"—" }}</dd>
+                    <dt class="col-sm-5">Периодичность</dt>
+                    <dd class="col-sm-7">{{ bulkmailing.get_periodicity_display }}</dd>
+                    <dt class="col-sm-5">Следующая отправка</dt>
+                    <dd class="col-sm-7">
+                        {% if bulkmailing.is_periodic %}
+                            {{ bulkmailing.next_run_at|default:"—" }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </dd>
+                    <dt class="col-sm-5">Окончание</dt>
+                    <dd class="col-sm-7">{{ bulkmailing.end_at|default:"—" }}</dd>
+                    <dt class="col-sm-5">Сообщение</dt>
+                    <dd class="col-sm-7">
+                        <a href="{% url 'texts:text_detail' bulkmailing.message.pk %}">{{ bulkmailing.message.title }}</a>
+                    </dd>
+                    <dt class="col-sm-5">Владелец</dt>
+                    <dd class="col-sm-7">{{ bulkmailing.owner.email }}</dd>
+                    <dt class="col-sm-5">Получатели</dt>
+                    <dd class="col-sm-7">{{ bulkmailing.recipients.count }}</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">Итоги попыток</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-7">Успешно</dt>
+                    <dd class="col-sm-5 text-success">{{ stats.success }}</dd>
+                    <dt class="col-sm-7">С ошибкой</dt>
+                    <dd class="col-sm-5 text-danger">{{ stats.failed }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h3 class="mt-4">Попытки отправки</h3>
+
+{% if attempts %}
+<div class="table-responsive">
+    <table class="table table-striped table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>#</th>
+                <th>Дата и время</th>
+                <th>Получатель</th>
+                <th>Статус</th>
+                <th>Код ошибки</th>
+                <th>Ответ сервера</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for attempt in attempts %}
+            <tr>
+                <td>{{ attempt.pk }}</td>
+                <td>{{ attempt.attempted_at }}</td>
+                <td>
+                    {% if attempt.recipient %}
+                        {{ attempt.recipient.name }}
+                        <div class="text-muted small">{{ attempt.recipient.email }}</div>
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="badge {% if attempt.status == 'success' %}bg-success{% else %}bg-danger{% endif %}">
+                        {{ attempt.get_status_display }}
+                    </span>
+                </td>
+                <td>{{ attempt.error_code|default:"—" }}</td>
+                <td>{{ attempt.server_response|default:"—" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-secondary">Попыток отправки ещё не было.</div>
+{% endif %}
+
+<div class="mt-4">
+    {% if bulkmailing.owner_id == user.id %}
+    <a href="{% url 'bulkmailing:bulkmailing_update' bulkmailing.pk %}" class="btn btn-secondary">Изменить</a>
+    <a href="{% url 'bulkmailing:bulkmailing_delete' bulkmailing.pk %}" class="btn btn-outline-danger">Удалить</a>
+    {% else %}
+    <div class="alert alert-secondary mb-0">
+        Это рассылка другого пользователя — доступно только просмотр.
+    </div>
+    {% endif %}
+    <a href="{% url 'bulkmailing:bulkmailing_list' %}" class="btn btn-outline-secondary">К списку</a>
+</div>
+{% endblock %}

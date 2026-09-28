@@ -1,0 +1,21 @@
+{% extends "texts/base.html" %}
+
+{% block title %}{{ client.name }}{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">{{ client.name }}</h1>
+
+<dl class="row">
+    <dt class="col-sm-3">Email</dt>
+    <dd class="col-sm-9">{{ client.email }}</dd>
+
+    <dt class="col-sm-3">Комментарий</dt>
+    <dd class="col-sm-9">{{ client.comment|default:"—" }}</dd>
+</dl>
+
+<div class="mt-4">
+    <a href="{% url 'clients:client_update' client.pk %}" class="btn btn-secondary">Изменить</a>
+    <a href="{% url 'clients:client_delete' client.pk %}" class="btn btn-outline-danger">Удалить</a>
+    <a href="{% url 'clients:clients_list' %}" class="btn btn-outline-secondary">К списку</a>
+</div>
+{% endblock %}

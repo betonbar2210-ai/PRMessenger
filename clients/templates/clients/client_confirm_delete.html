@@ -1,0 +1,17 @@
+{% extends "texts/base.html" %}
+
+{% block title %}Удалить клиента{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <h1 class="mb-4">Удалить клиента</h1>
+        <p>Вы уверены, что хотите удалить получателя <strong>{{ client.name }}</strong> ({{ client.email }})?</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Удалить</button>
+            <a href="{% url 'clients:clients_list' %}" class="btn btn-outline-secondary">Отмена</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

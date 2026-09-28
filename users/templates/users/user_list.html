@@ -1,0 +1,49 @@
+{% extends 'texts/base.html' %}
+{% block title %}Пользователи{% endblock %}
+{% block content %}
+<h1>Пользователи сервиса</h1>
+
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>Email</th>
+            <th>Роль</th>
+            <th>Статус</th>
+            <th>Клиентов</th>
+            <th>Рассылок</th>
+            {% if can_block %}<th>Действия</th>{% endif %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for u in users %}
+        <tr>
+            <td>{{ u.email }}</td>
+            <td>{{ u.get_role_display }}</td>
+            <td>
+                {% if u.is_blocked %}
+                    <span class="badge bg-danger">Заблокирован</span>
+                {% elif u.is_email_verified %}
+                    <span class="badge bg-success">Активен</span>
+                {% else %}
+                    <span class="badge bg-secondary">Не подтверждён</span>
+                {% endif %}
+            </td>
+            <td>{{ u.clients_count }}</td>
+            <td>{{ u.mailings_count }}</td>
+            {% if can_block %}
+            <td>
+                {% if u.id != user.id %}
+                <form method="post" action="{% url 'users:user_toggle_block' u.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm {% if u.is_blocked %}btn-success{% else %}btn-outline-danger{% endif %}">
+                        {% if u.is_blocked %}Разблокировать{% else %}Заблокировать{% endif %}
+                    </button>
+                </form>
+                {% endif %}
+            </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

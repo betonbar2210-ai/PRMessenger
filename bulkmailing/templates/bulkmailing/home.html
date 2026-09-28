@@ -1,0 +1,39 @@
+{% extends "texts/base.html" %}
+
+{% block title %}Главная{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Панель управления</h1>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card text-bg-primary h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Всего рассылок</h5>
+                <p class="display-4 mb-0">{{ total_mailings }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-bg-success h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Активных рассылок</h5>
+                <p class="display-4 mb-0">{{ active_mailings }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-bg-info h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Уникальных получателей</h5>
+                <p class="display-4 mb-0">{{ unique_clients }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-5">
+    <a href="{% url 'bulkmailing:bulkmailing_list' %}" class="btn btn-primary">Перейти к рассылкам</a>
+    <a href="{% url 'bulkmailing:bulkmailing_create' %}" class="btn btn-outline-primary">Создать новую рассылку</a>
+</div>
+{% endblock %}
